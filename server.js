@@ -6,6 +6,11 @@ app.get("/proxy", (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).send("No url provided");
 
+  app.get("/health", (req, res) => {
+  res.send("OK");
+});
+
+
   request({ url, encoding: null })
     .on("response", (response) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
