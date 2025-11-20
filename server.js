@@ -16,7 +16,7 @@ app.get("/proxy", (req, res) => {
     .on("error", () => {
       res.status(500).send("Proxy error");
     })
-    .pipe(res);
+     .pipe(res);
 });
 
 const PORT = process.env.PORT || 3000;
