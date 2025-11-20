@@ -6,7 +6,6 @@ app.get("/proxy", (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).send("No url provided");
 
-  // Проксируем любой ресурс (m3u8, ts, jpg и т.д.)
   request({ url, encoding: null })
     .on("response", (response) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
@@ -16,7 +15,7 @@ app.get("/proxy", (req, res) => {
     .on("error", () => {
       res.status(500).send("Proxy error");
     })
-     .pipe(res);
+    .pipe(res);
 });
 
 const PORT = process.env.PORT || 3000;
