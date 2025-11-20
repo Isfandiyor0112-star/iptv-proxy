@@ -16,7 +16,7 @@ app.get("/proxy", (req, res) => {
       if (line.startsWith("http://") || line.startsWith("https://")) {
         line = `https://iptv-proxy-m2sm.onrender.com/proxy?url=${encodeURIComponent(line)}`;
       }
-      return line;
+       return line;
     });
 
     res.setHeader("Access-Control-Allow-Origin", "*");
