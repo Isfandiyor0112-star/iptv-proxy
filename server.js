@@ -6,7 +6,11 @@ app.get("/proxy", (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).send("No url provided");
 
-  request({ url, encoding: null }, (err, response, body) => {
+  request({
+    url,
+    encoding: null,
+    headers: { "User-Agent": "Mozilla/5.0" }
+  }, (err, response, body) => {
     if (err || response.statusCode !== 200) {
       return res.status(500).send("Failed to fetch content");
     }
@@ -36,6 +40,7 @@ app.get("/proxy", (req, res) => {
   });
 });
 
+// health endpoint для Render/UptimeRobot
 app.get("/health", (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.send("OK");
