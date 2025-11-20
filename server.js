@@ -6,6 +6,12 @@ app.get("/proxy", (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).send("No url provided");
 
+  app.get("/health", (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.send("OK");
+});
+
+
   request({ url, encoding: null }, (err, response, body) => {
     if (err || response.statusCode !== 200) {
       return res.status(500).send("Failed to fetch content");
