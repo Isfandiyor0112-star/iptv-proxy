@@ -11,12 +11,9 @@ app.get("/proxy", (req, res) => {
       return res.status(500).send("Failed to fetch playlist");
     }
 
-    // Переписываем все http-ссылки внутри
+    // Оборачиваем все ссылки через наш прокси
     const lines = body.split("\n").map(line => {
-      if (line.startsWith("http://")) {
-        line = line.replace("http://", "https://");
-      }
-      if (line.startsWith("https://")) {
+      if (line.startsWith("http://") || line.startsWith("https://")) {
         line = `https://iptv-proxy-m2sm.onrender.com/proxy?url=${encodeURIComponent(line)}`;
       }
       return line;
