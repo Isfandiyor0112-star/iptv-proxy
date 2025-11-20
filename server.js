@@ -6,21 +6,33 @@ app.get("/proxy", (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).send("No url provided");
 
-  app.get("/health", (req, res) => {
-  res.send("OK");
-});
+  request({ url, encoding: null }, (err, response, body) => {
+    if (err || response.statusCode !== 200) {
+      return res.status(500).send("Failed to fetch content");
+    }
 
+    const contentType = response.headers["content-type"] || "";
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Headers", "*");
+    res.setHeader("Content-Type", contentType);
 
-  request({ url, encoding: null })
-    .on("response", (response) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Headers", "*");
-      res.setHeader("Content-Type", response.headers["content-type"] || "application/octet-stream");
-    })
-    .on("error", () => {
-      res.status(500).send("Proxy error");
-    })
-    .pipe(res);
+    // Если это плейлист — переписываем сегменты
+    if (contentType.includes("application/vnd.apple.mpegurl") || url.endsWith(".m3u8")) {
+      const baseUrl = url.split("/").slice(0, -1).join("/");
+      const lines = body.toString().split("\n").map(line => {
+        line = line.trim();
+        if (line && !line.startsWith("#") && !line.startsWith("http")) {
+          return `https://iptv-proxy-m2sm.onrender.com/proxy?url=${encodeURIComponent(baseUrl + "/" + line)}`;
+        } else if (line.startsWith("http")) {
+          return `https://iptv-proxy-m2sm.onrender.com/proxy?url=${encodeURIComponent(line)}`;
+        }
+        return line;
+      });
+      res.send(lines.join("\n"));
+    } else {
+      res.send(body); // сегменты .ts, .aac и т.д.
+    }
+  });
 });
 
 const PORT = process.env.PORT || 3000;
