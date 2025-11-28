@@ -19,6 +19,10 @@ app.get("/channel/:name/*", async (req, res) => {
   const baseUrl = CHANNELS[name];
   if (!baseUrl) return res.status(404).send("Канал не найден");
 
+  app.get("/ping", (req, res) => {
+  res.status(200).send("pong");
+});
+  
   // собираем полный URL
   const targetUrl = baseUrl + rest;
 
