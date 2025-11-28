@@ -5,20 +5,28 @@ import cors from "cors";
 const app = express();
 app.use(cors({ origin: "*" }));
 
+// список каналов
 const CHANNELS = {
-  futboltvuz: "https://st.uzlive.ru/futboltvuz/index.m3u8",
-  sporttvuz: "https://st.uzlive.ru/sportuztv/index.m3u8",
-  setanta1: "https://st.uzlive.ru/setanta-1/index.m3u8"
+  futboltvuz: "https://st.uzlive.ru/futboltvuz/",
+  sportuztv: "https://st.uzlive.ru/sportuztv/",
+  setanta1: "https://st.uzlive.ru/setanta-1/"
 };
 
-app.get("/channel/:name", async (req, res) => {
-  const url = CHANNELS[req.params.name];
-  if (!url) return res.status(404).send("Канал не найден");
+// универсальный прокси: плейлист + сегменты
+app.get("/channel/:name/*", async (req, res) => {
+  const name = req.params.name;
+  const rest = req.params[0]; // всё, что идёт после имени канала
+  const baseUrl = CHANNELS[name];
+  if (!baseUrl) return res.status(404).send("Канал не найден");
+
+  // собираем полный URL
+  const targetUrl = baseUrl + rest;
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(targetUrl, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
         "Referer": "https://futboll.tv/",
         "Origin": "https://futboll.tv",
         "Accept": "*/*",
@@ -39,5 +47,6 @@ app.get("/channel/:name", async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log("Server running on http://localhost:3000"));
-
+app.listen(3000, () =>
+  console.log("Server running on http://localhost:3000")
+);
