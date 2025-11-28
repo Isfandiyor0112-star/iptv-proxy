@@ -24,17 +24,18 @@ app.get("/channel/:name/*", async (req, res) => {
 
   try {
     const response = await fetch(targetUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-        "Referer": "https://futboll.tv/",
-        "Origin": "https://futboll.tv",
-        "Accept": "*/*",
-        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Accept-Encoding": "gzip, deflate, br, zstd"
-        // Если появятся куки или x-vsaas-session — добавь сюда
-      }
-    });
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    "Referer": "https://futboll.tv/",
+    "Origin": "https://futboll.tv",
+    "Accept": "*/*",
+    "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "x-sid": "6929952d-3f2d-4883-aea8-542c9ab2e638"
+    // Если появится Cookie или x-vsaas-session — добавь сюда
+  }
+});
+
 
     if (!response.ok) {
       res.status(response.status).send("Ошибка доступа к каналу");
