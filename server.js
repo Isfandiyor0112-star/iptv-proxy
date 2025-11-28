@@ -1,50 +1,44 @@
-const express = require("express");
-const request = require("request");
+import express from "express";
+import fetch from "node-fetch";
+
 const app = express();
 
-app.get("/proxy", (req, res) => {
-  const url = req.query.url;
-  if (!url) return res.status(400).send("No url provided");
+// Отдаём сайт из папки public
+app.use(express.static("public"));
 
-  request({
-    url,
-    encoding: null,
-    headers: { "User-Agent": "Mozilla/5.0" }
-  }, (err, response, body) => {
-    if (err || response.statusCode !== 200) {
-      return res.status(500).send("Failed to fetch content");
+// Прокси для каналов
+app.get("/channel/:name", async (req, res) => {
+  const name = req.params.name;
+  const url = `https://st.uzlive.ru/${name}/tracks-v1a1/mono.ts.m3u8`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://st.uzlive.ru/"
+      }
+    });
+    if (!response.ok) {
+      res.status(response.status).send("Ошибка доступа к каналу");
+      return;
     }
+    response.body.pipe(res);
+  } catch (err) {
+    res.status(500).send("Ошибка прокси: " + err.message);
+  }
+});
 
-    const contentType = response.headers["content-type"] || "";
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Headers", "*");
-    res.setHeader("Content-Type", contentType);
-
-    // Если это плейлист .m3u8 — переписываем сегменты
-    if (contentType.includes("application/vnd.apple.mpegurl") || url.endsWith(".m3u8")) {
-      const baseUrl = url.split("/").slice(0, -1).join("/");
-      const lines = body.toString().split("\n").map(line => {
-        line = line.trim();
-        if (line && !line.startsWith("#")) {
-          if (line.startsWith("http")) {
-            return `${req.protocol}://${req.get("host")}/proxy?url=${encodeURIComponent(line)}`;
-          }
-          return `${req.protocol}://${req.get("host")}/proxy?url=${encodeURIComponent(baseUrl + "/" + line)}`;
-        }
-        return line;
-      });
-      res.send(lines.join("\n"));
-    } else {
-      res.send(body); // сегменты .ts и другие файлы
+// Пример пинга токенов
+const TOKENS = ["token1", "token2"];
+setInterval(() => {
+  TOKENS.forEach(async token => {
+    try {
+      const r = await fetch(`https://tvcom/api/keepalive?token=${token}`);
+      console.log(`Ping ${token}:`, r.status);
+    } catch (e) {
+      console.error(`Ошибка пинга ${token}:`, e.message);
     }
   });
-});
+}, 10000);
 
-// health endpoint для Render/UptimeRobot
-app.get("/health", (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.send("OK");
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Proxy running on port ${PORT}`));
+app.listen(3000, () => console.log("Server running on http://localhost:3000"));
