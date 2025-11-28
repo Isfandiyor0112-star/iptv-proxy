@@ -3,6 +3,7 @@ import fetch from "node-fetch";
 
 const app = express();
 app.use(express.static("public"));
+app.use(cors({ origin: "*" }));
 
 // список каналов
 const CHANNELS = {
