@@ -2,14 +2,22 @@ import express from "express";
 import fetch from "node-fetch";
 
 const app = express();
-
-// Отдаём сайт из папки public
 app.use(express.static("public"));
 
-// Прокси для каналов
+// список каналов
+const CHANNELS = {
+  sportuztv: "https://st.uzlive.ru/sportuztv/tracks-v1a1/mono.ts.m3u8",
+  futboltvuz: "https://st.uzlive.ru/futboltvuz/tracks-v1a1/mono.ts.m3u8",
+  setanta1: "https://st.uzlive.ru/setanta-1/tracks-v1a1/mono.ts.m3u8"
+};
+
+// универсальный прокси
 app.get("/channel/:name", async (req, res) => {
-  const name = req.params.name;
-  const url = `https://st.uzlive.ru/${name}/tracks-v1a1/mono.ts.m3u8`;
+  const url = CHANNELS[req.params.name];
+  if (!url) {
+    res.status(404).send("Канал не найден");
+    return;
+  }
 
   try {
     const response = await fetch(url, {
@@ -27,18 +35,5 @@ app.get("/channel/:name", async (req, res) => {
     res.status(500).send("Ошибка прокси: " + err.message);
   }
 });
-
-// Пример пинга токенов
-const TOKENS = ["token1", "token2"];
-setInterval(() => {
-  TOKENS.forEach(async token => {
-    try {
-      const r = await fetch(`https://tvcom/api/keepalive?token=${token}`);
-      console.log(`Ping ${token}:`, r.status);
-    } catch (e) {
-      console.error(`Ошибка пинга ${token}:`, e.message);
-    }
-  });
-}, 10000);
 
 app.listen(3000, () => console.log("Server running on http://localhost:3000"));
