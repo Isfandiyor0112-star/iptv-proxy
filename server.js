@@ -1,5 +1,7 @@
 import express from "express";
 import fetch from "node-fetch";
+import cors from "cors";
+
 
 const app = express();
 app.use(express.static("public"));
@@ -7,7 +9,7 @@ app.use(cors({ origin: "*" }));
 
 // список каналов
 const CHANNELS = {
-  sportuztv: "https://st.uzlive.ru/sportuztv/tracks-v1a1/mono.ts.m3u8",
+  sporttvuz: "https://st.uzlive.ru/sportuztv/tracks-v1a1/mono.ts.m3u8",
   futboltvuz: "https://st.uzlive.ru/futboltvuz/tracks-v1a1/mono.ts.m3u8",
   setanta1: "https://st.uzlive.ru/setanta-1/tracks-v1a1/mono.ts.m3u8"
 };
