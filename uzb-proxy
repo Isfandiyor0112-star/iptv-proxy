@@ -1,0 +1,50 @@
+import express from "express";
+import fetch from "node-fetch";
+import cors from "cors";
+
+const app = express();
+app.use(cors({ origin: "*" }));
+
+// Порт для Render (он сам подставит нужный через process.env.PORT)
+const PORT = process.env.PORT || 3000;
+
+// УНИВЕРСАЛЬНЫЙ РОУТ ДЛЯ ITV
+// Формат ссылки будет: /proxy/НОМЕР_СТРИМА/ТОКЕН/ВРЕМЯ/ID_КАНАЛА/ОСТАЛЬНОЕ
+app.get("/proxy/:stream/:token/e/:expires/:id/*", async (req, res) => {
+    const { stream, token, expires, id } = req.params;
+    const rest = req.params[0];
+    
+    // Собираем полный URL динамически
+    // Например: https://stream15.itv.uz/t/qGKENYU.../e/1768138543/1010/index.m3u8
+    const targetUrl = `https://${stream}.itv.uz/t/${token}/e/${expires}/${id}/${rest}`;
+
+    try {
+        const response = await fetch(targetUrl, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Linux; Android 8.0.0; SM-G955U Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
+                "Referer": "https://itv.uz/",
+                "Origin": "https://itv.uz",
+                "Accept": "*/*",
+                "Connection": "keep-alive"
+            }
+        });
+
+        if (!response.ok) {
+            return res.status(response.status).send(`ITV Error: ${response.status}`);
+        }
+
+        // Передаем правильный тип контента (видео или плейлист)
+        res.setHeader('Content-Type', response.headers.get('content-type'));
+        
+        // ПРЯМАЯ ТРАНСЛЯЦИЯ (PIPE) — не нагружает RAM, не будет 10 секунд задержки
+        response.body.pipe(res);
+
+    } catch (err) {
+        res.status(500).send("Proxy Error: " + err.message);
+    }
+});
+
+// Пинг, чтобы Render не засыпал (опционально)
+app.get("/ping", (req, res) => res.send("pong"));
+
+app.listen(PORT, () => console.log(`Proxy running on port ${PORT}`));
