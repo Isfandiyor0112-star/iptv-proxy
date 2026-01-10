@@ -5,53 +5,59 @@ import cors from "cors";
 const app = express();
 app.use(cors({ origin: "*" }));
 
-// список каналов
 const CHANNELS = {
   futboltvuz: "https://st.uzlive.ru/futboltvuz/",
   sportuztv: "https://st.uzlive.ru/sportuztv/",
   setanta1: "https://st.uzlive.ru/setanta-1/"
 };
 
-// универсальный прокси: плейлист + сегменты
-app.get("/channel/:name/*", async (req, res) => {
-  const name = req.params.name;
-  const rest = req.params[0]; // всё, что идёт после имени канала
-  const baseUrl = CHANNELS[name];
-  if (!baseUrl) return res.status(404).send("Канал не найден");
-
-  app.get("/ping", (req, res) => {
+// 1. ПИНГ ВЫНЕСЕН НАРУЖУ (теперь Cron будет работать правильно)
+app.get("/ping", (req, res) => {
   res.status(200).send("pong");
 });
-  
-  // собираем полный URL
+
+app.get("/channel/:name/*", async (req, res) => {
+  const { name } = req.params;
+  const rest = req.params[0];
+  const baseUrl = CHANNELS[name];
+
+  if (!baseUrl) return res.status(404).send("Канал не найден");
+
   const targetUrl = baseUrl + rest;
 
   try {
     const response = await fetch(targetUrl, {
-  headers: {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-    "Referer": "https://futboll.tv/",
-    "Origin": "https://futboll.tv",
-    "Accept": "*/*",
-    "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-    "Accept-Encoding": "gzip, deflate, br, zstd",
-    "x-sid": "6929952d-3f2d-4883-aea8-542c9ab2e638"
-    // Если появится Cookie или x-vsaas-session — добавь сюда
-  }
-});
-
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+        "Referer": "https://futboll.tv/",
+        "Origin": "https://futboll.tv",
+        "x-sid": "6929952d-3f2d-4883-aea8-542c9ab2e638"
+      },
+      // Таймаут важен, чтобы прокси не "зависал" на плохих сегментах
+      timeout: 10000 
+    });
 
     if (!response.ok) {
-      res.status(response.status).send("Ошибка доступа к каналу");
-      return;
+      return res.status(response.status).send("Ошибка источника");
     }
 
+    // 2. ФИКС ЛАГОВ: Пробрасываем Content-Type (m3u8 или video/mp2t)
+    const contentType = response.headers.get("content-type");
+    if (contentType) res.setHeader("Content-Type", contentType);
+
+    // 3. СТРИМИНГ БЕЗ БУФЕРА (Прямая труба)
     response.body.pipe(res);
+
+    // Очистка памяти при закрытии плеера пользователем
+    req.on("close", () => {
+      if (response.body.destroy) response.body.destroy();
+    });
+
   } catch (err) {
-    res.status(500).send("Ошибка прокси: " + err.message);
+    console.error("Ошибка:", err.message);
+    if (!res.headersSent) res.status(500).send("Ошибка прокси");
   }
 });
 
-app.listen(3000, () =>
-  console.log("Server running on http://localhost:3000")
-);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Proxy active on port ${PORT}`));
