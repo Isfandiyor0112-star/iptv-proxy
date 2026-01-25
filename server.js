@@ -1,61 +1,40 @@
-import express from "express";
-import fetch from "node-fetch";
-import cors from "cors";
-
+const express = require('express');
+const fetch = require('node-fetch');
 const app = express();
-app.use(cors({ origin: "*" }));
 
 const CHANNELS = {
-  futboltvuz: "https://st.uzlive.ru/futboltvuz/",
-  sportuztv: "https://st.uzlive.ru/sportuztv/",
-  setanta1: "https://st.uzlive.ru/setanta-1/",
-  // Добавил Сетанту 2 (путь из твоего лога)
-  setanta2: "https://vod.splay.uz/live_splay/original/Setanta2HD/"
+  // Данные со скриншотов (ID 1010 и ID 1004)
+  futbolltvuz: "https://stream2.itv.uz/t/6vFVvNHMTdkhR5BfWtk7yA/e/1769450730/1010/tracks-v1a1/",
+  sportuztv: "https://stream6.itv.uz/t/HdmwT1i4nQ0KsYVgUX_-2Q/e/1769451986/1004/tracks-v1a1/"
 };
 
-app.get("/ping", (req, res) => res.status(200).send("pong"));
-
-app.get("/channel/:name/*", async (req, res) => {
-  const { name } = req.params;
-  const rest = req.params[0];
+app.get('/channel/:name/:file', async (req, res) => {
+  const { name, file } = req.params;
   const baseUrl = CHANNELS[name];
+  
+  if (!baseUrl) return res.status(404).send("Channel not found");
 
-  if (!baseUrl) return res.status(404).send("Канал не найден");
-
-  const targetUrl = baseUrl + rest;
-  const urlObj = new URL(targetUrl);
+  const targetUrl = baseUrl + file;
 
   try {
     const response = await fetch(targetUrl, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-        // ПРИТВОРЯЕМСЯ ЖИВЫМ САЙТОМ
+        "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
         "Referer": "https://itv.uz/",
         "Origin": "https://itv.uz",
-        "Host": urlObj.host, // Очень важно для splay.uz
-        "Accept": "*/*",
-        "Connection": "keep-alive"
-      },
-      timeout: 15000 
+        "Accept": "*/*"
+      }
     });
 
-    if (!response.ok) {
-      // Если 403, пробуем передать статус дальше для отладки
-      return res.status(response.status).send(`Ошибка источника: ${response.status}`);
+    if (response.status === 403) {
+      return res.status(403).send("ITV блокирует запрос. Проверь токен или регион сервера.");
     }
 
-    const contentType = response.headers.get("content-type");
-    if (contentType) res.setHeader("Content-Type", contentType);
-
+    // Пробрасываем поток видео в плеер
     response.body.pipe(res);
-
-    req.on("close", () => {
-      if (response.body.destroy) response.body.destroy();
-    });
-
-  } catch (err) {
-    if (!res.headersSent) res.status(500).send("Ошибка прокси");
+  } catch (e) {
+    res.status(500).send("Proxy Error");
   }
 });
 
-export default app;
+module.exports = app;
