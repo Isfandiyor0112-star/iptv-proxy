@@ -13,6 +13,7 @@ app.get('/channel/:name/:file', async (req, res) => {
   
   if (!baseUrl) return res.status(404).send("Channel not found");
 
+  // ITV часто использует mono.m3u8 внутри своих систем
   const isPlaylist = file.endsWith('.m3u8') || file === 'index.m3u8';
   const targetFile = (file === 'index.m3u8') ? 'mono.m3u8' : file;
   const targetUrl = baseUrl + targetFile;
@@ -28,20 +29,22 @@ app.get('/channel/:name/:file', async (req, res) => {
 
     if (isPlaylist) {
       let content = await response.text();
-      // ЗАМЕНЯЕМ ССЫЛКИ: превращаем "segment.ts" в "/channel/name/segment.ts"
-      // Это заставит плеер качать видео через твой прокси
-      const fixedContent = content.replace(/^(?!http)(.+)/gm, (match) => {
-          return `/channel/${name}/${match}`;
-      });
+      
+      // КЛЮЧЕВОЙ МОМЕНТ: Заменяем относительные ссылки на сегменты .ts
+      // Чтобы плеер запрашивал их через наш прокси: /channel/имя/файл.ts
+      const fixedContent = content.replace(/^(?!http)(.+)/gm, `/channel/${name}/$1`);
       
       res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+      res.setHeader('Access-Control-Allow-Origin', '*'); // Для работы в браузере
       return res.send(fixedContent);
     }
 
-    // Для файлов .ts (видео) просто пробрасываем поток
+    // Для видео-файлов (.ts) просто передаем поток
+    res.setHeader('Access-Control-Allow-Origin', '*');
     response.body.pipe(res);
 
   } catch (e) {
+    console.error("Error:", e);
     res.status(500).send("Proxy Error");
   }
 });
