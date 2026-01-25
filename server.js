@@ -3,6 +3,7 @@ import fetch from "node-fetch";
 import cors from "cors";
 
 const app = express();
+// Разрешаем CORS для твоего фронтенда
 app.use(cors({ origin: "*" }));
 
 const CHANNELS = {
@@ -11,10 +12,8 @@ const CHANNELS = {
   setanta1: "https://st.uzlive.ru/setanta-1/"
 };
 
-// 1. ПИНГ ВЫНЕСЕН НАРУЖУ (теперь Cron будет работать правильно)
-app.get("/ping", (req, res) => {
-  res.status(200).send("pong");
-});
+// Пинг для совместимости
+app.get("/ping", (req, res) => res.status(200).send("pong"));
 
 app.get("/channel/:name/*", async (req, res) => {
   const { name } = req.params;
@@ -33,31 +32,27 @@ app.get("/channel/:name/*", async (req, res) => {
         "Origin": "https://futboll.tv",
         "x-sid": "6929952d-3f2d-4883-aea8-542c9ab2e638"
       },
-      // Таймаут важен, чтобы прокси не "зависал" на плохих сегментах
-      timeout: 10000 
+      // Таймаут чуть больше, чтобы тяжелые куски успевали подгрузиться
+      timeout: 15000 
     });
 
     if (!response.ok) {
       return res.status(response.status).send("Ошибка источника");
     }
 
-    // 2. ФИКС ЛАГОВ: Пробрасываем Content-Type (m3u8 или video/mp2t)
     const contentType = response.headers.get("content-type");
     if (contentType) res.setHeader("Content-Type", contentType);
 
-    // 3. СТРИМИНГ БЕЗ БУФЕРА (Прямая труба)
+    // ПОЛНОЕ ПРОКСИРОВАНИЕ (Та самая "Труба")
     response.body.pipe(res);
 
-    // Очистка памяти при закрытии плеера пользователем
     req.on("close", () => {
       if (response.body.destroy) response.body.destroy();
     });
 
   } catch (err) {
-    console.error("Ошибка:", err.message);
     if (!res.headersSent) res.status(500).send("Ошибка прокси");
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Proxy active on port ${PORT}`));
+export default app;
