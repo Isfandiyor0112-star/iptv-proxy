@@ -3,14 +3,12 @@ import fetch from 'node-fetch';
 
 const app = express();
 
-// Сюда вставляй актуальные ссылки со свежими токенами из панели разработчика!
 const CHANNELS = {
   futboltvuz: "https://stream5.itv.uz/t/tXBcFpCOrbUUOv-5LoYavA/e/1784540920/1004/tracks-v1a1/",
   sportuztv: "https://stream17.itv.uz/t/pbK7jqujEp1Ei7NGBDXQNw/e/1784542449/1004/tracks-v1a1/",
   setanta1: "https://stream5.itv.uz/t/tXBcFpCOrbUUOv-5LoYavA/e/1784540920/1004/tracks-v1a1/"
 };
 
-// Полная поддержка CORS
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -19,31 +17,21 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/channel/:name/:file', async (req, res) => {
+// Нам нужен только один роут — для получения плейлиста!
+app.get('/channel/:name/index.m3u8', async (req, res) => {
   res.header('Access-Control-Allow-Origin', '*');
 
-  const { name, file } = req.params;
+  const { name } = req.params;
   const baseUrl = CHANNELS[name];
   
   if (!baseUrl) {
-    console.error(`Канал не найден: ${name}`);
-    return res.status(404).send(`Channel ${name} not found in config`);
+    return res.status(404).send(`Channel ${name} not found`);
   }
 
-  const isPlaylist = file.endsWith('.m3u8');
-  const targetFile = (file === 'index.m3u8') ? 'mono.m3u8' : file;
-  
-  const queryString = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
-  const targetUrl = baseUrl + targetFile + queryString;
+  // Запрашиваем оригинальный mono.m3u8 с itv.uz через сервер (чтобы обойти CORS на сам текст)
+  const targetUrl = baseUrl + 'mono.m3u8';
 
-  // Если это тяжелый видео-фрагмент — отправляем в редирект
-  if (!isPlaylist) {
-    return res.redirect(302, targetUrl);
-  }
-
-  // Если это текстовый плейлист — парсим его
   try {
-    console.log(`Запрос к itv.uz: ${targetUrl}`);
     const response = await fetch(targetUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36",
@@ -53,26 +41,21 @@ app.get('/channel/:name/:file', async (req, res) => {
     });
 
     if (!response.ok) {
-      const errText = await response.text();
-      console.error(`itv.uz вернул ошибку ${response.status}: ${errText}`);
-      return res.status(response.status).send(`Source returned error ${response.status}`);
+      return res.status(response.status).send(`Source error ${response.status}`);
     }
 
     let content = await response.text();
-    const protocol = req.headers['x-forwarded-proto'] || 'https';
-    const host = req.get('host');
-    const proxyPath = `${protocol}://${host}/channel/${name}/`;
     
-    const fixedContent = content.replace(/^(?!http)(.+)/gm, `${proxyPath}$1`);
+    // ВНИМАНИЕ: Подставляем в начало строк не свой прокси, а ОРИГИНАЛЬНЫЙ baseUrl от itv.uz!
+    // Это заставит телефон/пк пользователя качать видео-кусочки НАПРЯМУЮ с itv.uz
+    const fixedContent = content.replace(/^(?!http|#)(.+)/gm, `${baseUrl}$1`);
     
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     return res.send(fixedContent);
 
   } catch (e) {
-    console.error("Критическая ошибка на бэкенде:", e.message);
-    return res.status(500).send(`Internal Proxy Error: ${e.message}`);
+    return res.status(500).send(`Error: ${e.message}`);
   }
 });
 
-// Для работы на Vercel экспортируем приложение как дефолтный модуль
 export default app;
