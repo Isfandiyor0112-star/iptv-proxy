@@ -5,9 +5,9 @@ const app = express();
 
 // Сюда вставляй актуальные ссылки со свежими токенами из панели разработчика!
 const CHANNELS = {
-  futboltvuz: "https://stream5.itv.uz/t/tXBcFpCOrbUUOv-5LoYavA/e/1784540920/1004/tracks-v1/",
-  sportuztv: "https://stream17.itv.uz/t/pbK7jqujEp1Ei7NGBDXQNw/e/1784542449/1004/tracks-v1/",
-  setanta1: "https://stream5.itv.uz/t/tXBcFpCOrbUUOv-5LoYavA/e/1784540920/1004/tracks-v1/"
+  futboltvuz: "https://stream5.itv.uz/t/tXBcFpCOrbUUOv-5LoYavA/e/1784540920/1004/tracks-v1a1/",
+  sportuztv: "https://stream17.itv.uz/t/pbK7jqujEp1Ei7NGBDXQNw/e/1784542449/1004/tracks-v1a1/",
+  setanta1: "https://stream5.itv.uz/t/tXBcFpCOrbUUOv-5LoYavA/e/1784540920/1004/tracks-v1a1/"
 };
 
 // Полная поддержка CORS
